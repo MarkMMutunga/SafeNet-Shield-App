@@ -1,0 +1,79 @@
+package com.safenet.shield.auth
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.safenet.shield.MainActivity
+import com.safenet.shield.databinding.ActivityTwoFactorAuthBinding
+import com.safenet.shield.utils.SecurityUtils
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanIntentResult
+import com.journeyapps.barcodescanner.ScanOptions
+import org.json.JSONObject
+
+class TwoFactorAuthActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityTwoFactorAuthBinding
+    private lateinit var securityUtils: SecurityUtils
+    private val barcodeLauncher = registerForActivityResult(ScanContract()) { result: ScanIntentResult ->
+        if (result.contents == null) {
+            Toast.makeText(this, "Cancelled", Toast.LENGTH_LONG).show()
+        } else {
+            try {
+                val json = JSONObject(result.contents)
+                val secret = json.getString("secret")
+                securityUtils.enable2FA(secret)
+                Toast.makeText(this, "2FA setup successful", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Invalid QR code", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityTwoFactorAuthBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        securityUtils = SecurityUtils.getInstance(this)
+        setupClickListeners()
+    }
+
+    private fun setupClickListeners() {
+        binding.btnVerify.setOnClickListener {
+            verifyCode()
+        }
+
+        binding.btnScanQr.setOnClickListener {
+            startQRScanner()
+        }
+    }
+
+    private fun verifyCode() {
+        val code = binding.etVerificationCode.text.toString()
+        if (code.length != 6) {
+            binding.tilVerificationCode.error = "Please enter a valid 6-digit code"
+            return
+        }
+
+        // TODO: Replace with actual 2FA verification
+        // This is just a placeholder for demonstration
+        val isValid = true // In real app, verify against the 2FA secret
+
+        if (isValid) {
+            Toast.makeText(this, "2FA verification successful", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        } else {
+            binding.tilVerificationCode.error = "Invalid verification code"
+        }
+    }
+
+    private fun startQRScanner() {
+        val options = ScanOptions()
+        options.setPrompt("Scan QR Code")
+        options.setBeepEnabled(false)
+        options.setBarcodeImageEnabled(true)
+        barcodeLauncher.launch(options)
+    }
+} 

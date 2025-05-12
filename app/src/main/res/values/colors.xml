@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Theme Colors -->
+    <color name="primary">#3B82F6</color>  <!-- Aurora Blue -->
+    <color name="primary_dark">#2563EB</color>  <!-- Darker shade of Aurora Blue -->
+    <color name="secondary">#10B981</color>  <!-- Mint Green Glow -->
+    <color name="secondary_dark">#059669</color>  <!-- Darker shade of Mint Green -->
+    
+    <!-- Theme Required Colors -->
+    <color name="cloud_white">#F9FAFB</color>  <!-- Same as text_primary -->
+    <color name="courage_violet">#8B5CF6</color>  <!-- Violet Blur -->
+    <color name="soft_teal">#10B981</color>  <!-- Same as secondary -->
+    
+    <!-- Card and Background Colors -->
+    <color name="card_background">#1F2937</color>  <!-- Slate Glass -->
+    <color name="background">#0B1120</color>  <!-- Deep Space Navy -->
+    <color name="midnight_blue">#0B1120</color>  <!-- Deep Space Navy -->
+    
+    <!-- Input and Interactive Elements -->
+    <color name="input_background">#1F2937</color>
+    <color name="input_stroke">#3B82F6</color>
+    <color name="button_background">#3B82F6</color>
+    <color name="button_text">#F9FAFB</color>
+    <color name="switch_track">#1F2937</color>
+    <color name="switch_thumb">#3B82F6</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#F9FAFB</color>  <!-- Cloud White -->
+    <color name="text_secondary">#9CA3AF</color>  <!-- Cool Gray -->
+    
+    <!-- Status Colors -->
+    <color name="success">#10B981</color>  <!-- Success Green -->
+    <color name="warning">#F59E0B</color>  <!-- Warning Amber -->
+    <color name="error">#EF4444</color>    <!-- Error Red -->
+    
+    <!-- Utility Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+</resources>

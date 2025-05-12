@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <domain-config>
+        <domain includeSubdomains="true">api.safenet-shield.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+        <pin-set expiration="2024-12-31">
+            <!-- Add your certificate pins here -->
+        </pin-set>
+    </domain-config>
+</network-security-config> 
