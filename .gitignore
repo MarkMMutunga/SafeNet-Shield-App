@@ -1,3 +1,27 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
 # Android Studio / IntelliJ IDEA
 *.iml
 .gradle
@@ -12,6 +36,42 @@
 /.idea/gradle.xml
 /.idea/vcs.xml
 /.idea/deploymentTargetDropDown.xml
+/.idea/
+
+# SENSITIVE FILES - NEVER COMMIT THESE
+app/google-services.json
+local.properties
+*.jks
+*.keystore
+keystore.properties
+/app/release/
+/app/debug/
+/app/src/main/assets/google-services.json
+
+# API Keys and Secrets (add your specific files here)
+secrets.properties
+api_keys.properties
+firebase_config.json
+
+# Build outputs
+/build/
+app/build/
+*/build/
+build/
+.gradle/
+gradle-app.setting
+
+# Captures
+/captures/
+*.cap
+
+# Keystore files
+*.jks
+*.keystore
+
+# External native build folder generated in Android Studio 2.2 and later
+.externalNativeBuild/
+.cxx/
 
 # OS generated files
 .DS_Store
