@@ -1,0 +1,118 @@
+{
+  "// ========================================": "",
+  "// SAFENET SHIELD - FIREBASE AUTH CONFIG": "",
+  "// ========================================": "",
+  
+  "signIn": {
+    "allowAnonymous": false,
+    "allowDuplicateEmails": false,
+    "requireEmail": true,
+    "requireEmailVerification": true,
+    "enableMultiFactorAuth": true,
+    "sessionTimeout": "24h"
+  },
+  
+  "customClaims": {
+    "roles": [
+      "user",
+      "premium_user", 
+      "moderator",
+      "admin",
+      "law_enforcement",
+      "government_official",
+      "prosecutor",
+      "judge",
+      "forensic_expert",
+      "emergency_services",
+      "compliance_officer",
+      "auditor",
+      "legal_counsel",
+      "verification_agent",
+      "system"
+    ],
+    
+    "permissions": {
+      "analytics_consent": "boolean",
+      "device_consent": "boolean", 
+      "legal_access": "boolean",
+      "emergency_access": "boolean",
+      "verification_level": "string",
+      "jurisdiction": "string",
+      "badge_number": "string",
+      "department": "string"
+    }
+  },
+  
+  "accountLinking": {
+    "enabled": true,
+    "allowedProviders": [
+      "google.com",
+      "phone",
+      "email"
+    ]
+  },
+  
+  "passwordPolicy": {
+    "minLength": 12,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireNumbers": true,
+    "requireSymbols": true,
+    "preventCommonPasswords": true,
+    "preventPasswordReuse": 12
+  },
+  
+  "multiFactorAuth": {
+    "enabled": true,
+    "requiredForRoles": [
+      "admin",
+      "law_enforcement", 
+      "government_official",
+      "prosecutor",
+      "judge",
+      "compliance_officer"
+    ],
+    "methods": [
+      "sms",
+      "totp",
+      "email"
+    ]
+  },
+  
+  "accountLockout": {
+    "enabled": true,
+    "maxAttempts": 5,
+    "lockoutDuration": "30m",
+    "progressiveLockout": true
+  },
+  
+  "auditLogging": {
+    "enabled": true,
+    "logSignInAttempts": true,
+    "logPasswordChanges": true,
+    "logAccountCreation": true,
+    "logRoleChanges": true,
+    "logSuspiciousActivity": true
+  },
+  
+  "deviceTrust": {
+    "enabled": true,
+    "requireTrustedDevice": false,
+    "deviceRegistrationRequired": true,
+    "maxDevicesPerUser": 5
+  },
+  
+  "geolocation": {
+    "trackUserLocation": true,
+    "restrictByCountry": false,
+    "suspiciousLocationChecks": true,
+    "allowedCountries": ["KE", "US", "GB", "CA", "AU"]
+  },
+  
+  "sessionSecurity": {
+    "tokenRefreshInterval": "1h",
+    "maxConcurrentSessions": 3,
+    "logoutOnSuspiciousActivity": true,
+    "requireReauthForSensitiveOps": true
+  }
+}

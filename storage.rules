@@ -1,0 +1,288 @@
+rules_version = '2';
+
+// ========================================
+// SAFENET SHIELD - FIREBASE STORAGE RULES
+// ========================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isVerifiedUser() {
+      return request.auth != null && 
+             request.auth.token.email_verified == true;
+    }
+    
+    function isValidFileSize(maxSizeBytes) {
+      return resource.size <= maxSizeBytes;
+    }
+    
+    function isValidImageType() {
+      return resource.contentType.matches('image/.*') &&
+             resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+    }
+    
+    function isValidDocumentType() {
+      return resource.contentType in [
+        'application/pdf', 
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ];
+    }
+    
+    function hasLawEnforcementAccess() {
+      return request.auth.token.role in [
+        'law_enforcement', 'prosecutor', 'judge', 'forensic_expert'
+      ];
+    }
+    
+    // ========================================
+    // USER EVIDENCE UPLOADS
+    // ========================================
+    
+    // Screenshots and evidence images
+    match /evidence/{userId}/images/{fileName} {
+      allow read: if isAuthenticated() && (
+        isOwner(userId) ||
+        hasLawEnforcementAccess()
+      );
+      
+      allow write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        isValidImageType() &&
+        isValidFileSize(10 * 1024 * 1024) && // 10MB limit
+        fileName.matches('[a-zA-Z0-9_-]+\\.(jpg|jpeg|png|webp)');
+      
+      allow delete: if isOwner(userId) &&
+        // Only allow deletion within 1 hour of upload
+        resource.timeCreated > timestamp.value(request.time - duration.value(1, 'h'));
+    }
+    
+    // Document evidence (PDFs, reports, etc.)
+    match /evidence/{userId}/documents/{fileName} {
+      allow read: if isAuthenticated() && (
+        isOwner(userId) ||
+        hasLawEnforcementAccess()
+      );
+      
+      allow write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        isValidDocumentType() &&
+        isValidFileSize(25 * 1024 * 1024) && // 25MB limit
+        fileName.matches('[a-zA-Z0-9_-]+\\.(pdf|doc|docx|txt)');
+      
+      allow delete: if false; // Documents cannot be deleted for legal compliance
+    }
+    
+    // Audio evidence (voice recordings, calls)
+    match /evidence/{userId}/audio/{fileName} {
+      allow read: if isAuthenticated() && (
+        isOwner(userId) ||
+        hasLawEnforcementAccess()
+      );
+      
+      allow write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        resource.contentType.matches('audio/.*') &&
+        resource.contentType in ['audio/mpeg', 'audio/wav', 'audio/m4a'] &&
+        isValidFileSize(50 * 1024 * 1024) && // 50MB limit
+        fileName.matches('[a-zA-Z0-9_-]+\\.(mp3|wav|m4a)');
+      
+      allow delete: if false; // Audio evidence cannot be deleted
+    }
+    
+    // ========================================
+    // BLOCKCHAIN EVIDENCE STORAGE
+    // ========================================
+    
+    // Blockchain-verified evidence (immutable)
+    match /blockchain_evidence/{evidenceId}/{fileName} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.metadata.uploadedBy ||
+        hasLawEnforcementAccess() ||
+        request.auth.token.legal_access == true
+      );
+      
+      allow write: if isVerifiedUser() &&
+        resource.metadata.uploadedBy == request.auth.uid &&
+        resource.metadata.blockchainHash != null &&
+        isValidFileSize(100 * 1024 * 1024); // 100MB limit for critical evidence
+      
+      allow delete: if false; // Blockchain evidence is immutable
+    }
+    
+    // ========================================
+    // GOVERNMENT REPORT ATTACHMENTS
+    // ========================================
+    
+    // Official government report submissions
+    match /government_reports/{reportId}/attachments/{fileName} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.metadata.reporterId ||
+        hasLawEnforcementAccess() ||
+        request.auth.token.role == 'government_official'
+      );
+      
+      allow write: if isVerifiedUser() &&
+        resource.metadata.reporterId == request.auth.uid &&
+        (isValidImageType() || isValidDocumentType()) &&
+        isValidFileSize(50 * 1024 * 1024) && // 50MB limit
+        resource.metadata.reportType in [
+          'POLICE_REPORT', 'DCI_SUBMISSION', 'COURT_FILING', 
+          'REGULATORY_COMPLAINT', 'FORENSIC_EVIDENCE'
+        ];
+      
+      allow delete: if false; // Government submissions cannot be deleted
+    }
+    
+    // ========================================
+    // USER PROFILE & VERIFICATION
+    // ========================================
+    
+    // Profile pictures
+    match /users/{userId}/profile/{fileName} {
+      allow read: if isAuthenticated();
+      
+      allow write: if isOwner(userId) &&
+        isValidImageType() &&
+        isValidFileSize(5 * 1024 * 1024) && // 5MB limit
+        fileName == 'profile_picture.jpg';
+      
+      allow delete: if isOwner(userId);
+    }
+    
+    // Identity verification documents (highly sensitive)
+    match /users/{userId}/verification/{fileName} {
+      allow read: if isOwner(userId) ||
+        request.auth.token.role in ['admin', 'verification_agent'];
+      
+      allow write: if isOwner(userId) &&
+        isValidDocumentType() &&
+        isValidFileSize(10 * 1024 * 1024) && // 10MB limit
+        fileName.matches('(id_document|address_proof|phone_verification)\\.(pdf|jpg|png)');
+      
+      allow delete: if request.auth.token.role == 'admin';
+    }
+    
+    // ========================================
+    // AI SAFETY ASSISTANT FILES
+    // ========================================
+    
+    // AI-analyzed content for safety assessment
+    match /ai_analysis/{userId}/content/{fileName} {
+      allow read, write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        isValidFileSize(20 * 1024 * 1024); // 20MB limit
+      
+      allow delete: if isOwner(userId);
+    }
+    
+    // ========================================
+    // COMMUNITY INTELLIGENCE MEDIA
+    // ========================================
+    
+    // Community-shared safety alerts media
+    match /community_alerts/{alertId}/media/{fileName} {
+      allow read: if isAuthenticated() &&
+        // Public safety information
+        resource.metadata.alertType in ['PUBLIC_WARNING', 'SCAM_ALERT'];
+      
+      allow write: if isVerifiedUser() &&
+        isValidImageType() &&
+        isValidFileSize(10 * 1024 * 1024) && // 10MB limit
+        resource.metadata.verificationCount >= 2; // Requires community verification
+      
+      allow delete: if request.auth.token.role in ['admin', 'moderator'];
+    }
+    
+    // ========================================
+    // WEARABLE & IOT DEVICE DATA
+    // ========================================
+    
+    // Wearable device logs and data exports
+    match /wearable_data/{userId}/exports/{fileName} {
+      allow read, write: if isOwner(userId) &&
+        request.auth.token.device_consent == true &&
+        isValidFileSize(100 * 1024 * 1024); // 100MB limit for device data
+      
+      allow delete: if isOwner(userId);
+    }
+    
+    // Emergency health data (accessible by emergency services)
+    match /health_emergency/{userId}/data/{fileName} {
+      allow read: if isOwner(userId) ||
+        (request.auth.token.role == 'emergency_services' &&
+         resource.metadata.emergencyActive == true);
+      
+      allow write: if isOwner(userId) &&
+        request.auth.token.device_consent == true;
+      
+      allow delete: if isOwner(userId);
+    }
+    
+    // ========================================
+    // SYSTEM & ADMINISTRATIVE FILES
+    // ========================================
+    
+    // System backups and exports (admin only)
+    match /system/{adminPath}/{fileName} {
+      allow read, write: if request.auth.token.role == 'admin';
+    }
+    
+    // Audit trail exports
+    match /audit_exports/{auditId}/{fileName} {
+      allow read: if request.auth.token.role in [
+        'admin', 'compliance_officer', 'auditor'
+      ];
+      
+      allow write: if request.auth.token.role in [
+        'admin', 'compliance_officer'
+      ];
+      
+      allow delete: if false; // Audit files are retained for compliance
+    }
+    
+    // Legal discovery exports
+    match /legal_exports/{caseId}/{fileName} {
+      allow read, write: if request.auth.token.role in [
+        'legal_counsel', 'prosecutor', 'judge'
+      ];
+      
+      allow delete: if false; // Legal files cannot be deleted
+    }
+    
+    // ========================================
+    // TEMPORARY FILES & PROCESSING
+    // ========================================
+    
+    // Temporary processing files (auto-cleanup)
+    match /temp/{userId}/{fileName} {
+      allow read, write: if isOwner(userId) &&
+        isValidFileSize(50 * 1024 * 1024) && // 50MB limit
+        // Files expire after 24 hours
+        resource.timeCreated > timestamp.value(request.time - duration.value(24, 'h'));
+      
+      allow delete: if isOwner(userId) ||
+        // System can clean up expired temp files
+        request.auth.token.role == 'system';
+    }
+    
+    // ========================================
+    // DEFAULT SECURITY POLICY
+    // ========================================
+    
+    // Explicitly deny access to any unmatched files
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

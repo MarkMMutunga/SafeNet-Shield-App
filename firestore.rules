@@ -1,0 +1,357 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // SAFENET SHIELD - COMPREHENSIVE SECURITY RULES
+    // ========================================
+    
+    // Helper functions for security validation
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidTimestamp(timestamp) {
+      return timestamp is timestamp && 
+             timestamp > timestamp.value(2024, 1, 1) && 
+             timestamp < timestamp.value(2030, 12, 31);
+    }
+    
+    function hasValidUserData() {
+      return request.resource.data.keys().hasAll(['userId', 'timestamp']) &&
+             request.resource.data.userId == request.auth.uid &&
+             isValidTimestamp(request.resource.data.timestamp);
+    }
+    
+    function isVerifiedUser() {
+      return isAuthenticated() && 
+             request.auth.token.email_verified == true;
+    }
+    
+    function hasMinimumDataSize() {
+      return request.resource.data.size() > 0 && 
+             request.resource.data.size() < 1000000; // 1MB limit
+    }
+    
+    // ========================================
+    // USER REPORTS & INCIDENTS
+    // ========================================
+    
+    // User incident reports - Enhanced security
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && (
+        // Owner can read their own reports
+        isOwner(resource.data.userId) ||
+        // Law enforcement with special claims can read verified reports
+        (request.auth.token.role == 'law_enforcement' && 
+         resource.data.verificationStatus == 'verified') ||
+        // Community moderators can read flagged reports
+        (request.auth.token.role == 'moderator' && 
+         resource.data.flaggedForReview == true)
+      );
+      
+      allow create: if isVerifiedUser() && 
+        hasValidUserData() &&
+        hasMinimumDataSize() &&
+        request.resource.data.keys().hasAll([
+          'reportType', 'description', 'location', 'severity'
+        ]) &&
+        request.resource.data.reportType in [
+          'SCAM', 'FRAUD', 'CYBERCRIME', 'IDENTITY_THEFT', 
+          'FINANCIAL_FRAUD', 'PHISHING', 'HARASSMENT'
+        ] &&
+        request.resource.data.severity in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      
+      allow update: if isOwner(resource.data.userId) && 
+        // Only allow updates within 24 hours of creation
+        resource.data.timestamp > timestamp.value(timestamp.date(request.time) - duration.value(1, 'd')) &&
+        // Cannot change critical fields
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.reportId == resource.data.reportId;
+      
+      allow delete: if false; // Reports cannot be deleted for legal compliance
+    }
+    
+    // ========================================
+    // COMMUNITY INTELLIGENCE & SAFETY ALERTS
+    // ========================================
+    
+    // Community safety alerts
+    match /safety_alerts/{alertId} {
+      allow read: if isAuthenticated() &&
+        // Public safety information available to all verified users
+        resource.data.alertType in ['PUBLIC_WARNING', 'SCAM_ALERT', 'FRAUD_WARNING'];
+      
+      allow create: if isVerifiedUser() &&
+        hasValidUserData() &&
+        request.resource.data.keys().hasAll([
+          'alertType', 'title', 'description', 'location', 'severity'
+        ]) &&
+        request.resource.data.alertType in [
+          'SCAM_HOTSPOT', 'FAKE_WEBSITE_SPOTTED', 'PHISHING_CAMPAIGN',
+          'FRAUD_WARNING', 'IDENTITY_THEFT_RING', 'CYBERCRIME_TREND'
+        ];
+      
+      allow update: if isOwner(resource.data.reporterHash) &&
+        // Only verification count and status can be updated by community
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['verificationCount', 'isVerified', 'lastUpdated']);
+      
+      allow delete: if request.auth.token.role == 'admin' ||
+        (isOwner(resource.data.reporterHash) && 
+         resource.data.verificationCount < 3);
+    }
+    
+    // Community intelligence data
+    match /community_intelligence/{dataId} {
+      allow read: if isVerifiedUser() &&
+        // Only aggregated, anonymized data
+        resource.data.dataType == 'AGGREGATED_STATS';
+      
+      allow write: if request.auth.token.role in ['admin', 'system'];
+    }
+    
+    // ========================================
+    // ML THREAT PREDICTIONS & ANALYTICS
+    // ========================================
+    
+    // ML threat predictions (user-specific)
+    match /threat_predictions/{userId} {
+      allow read, write: if isOwner(userId) &&
+        hasValidUserData();
+    }
+    
+    // Behavioral analysis data (highly sensitive)
+    match /behavioral_analysis/{userId} {
+      allow read, write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        // Additional consent check
+        request.auth.token.analytics_consent == true;
+    }
+    
+    // Security analytics dashboard data
+    match /security_analytics/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Only system can write analytics
+    }
+    
+    // ========================================
+    // BLOCKCHAIN EVIDENCE SYSTEM
+    // ========================================
+    
+    // Blockchain evidence records (immutable)
+    match /blockchain_evidence/{evidenceId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.ownerId) ||
+        request.auth.token.role == 'law_enforcement' ||
+        // Legal authorities with special access
+        request.auth.token.legal_access == true
+      );
+      
+      allow create: if isVerifiedUser() &&
+        hasValidUserData() &&
+        request.resource.data.keys().hasAll([
+          'evidenceType', 'contentHash', 'timestamp', 'blockHash'
+        ]) &&
+        request.resource.data.evidenceType in [
+          'SCREENSHOT', 'DOCUMENT', 'COMMUNICATION_LOG', 
+          'TRANSACTION_RECORD', 'DIGITAL_SIGNATURE'
+        ];
+      
+      allow update, delete: if false; // Blockchain evidence is immutable
+    }
+    
+    // Evidence verification records
+    match /evidence_verification/{verificationId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.verifierId) ||
+        request.auth.token.role in ['law_enforcement', 'legal_authority']
+      );
+      
+      allow create: if request.auth.token.role in [
+        'law_enforcement', 'forensic_expert', 'legal_authority'
+      ] && hasValidUserData();
+      
+      allow update, delete: if false; // Verification records are immutable
+    }
+    
+    // ========================================
+    // GOVERNMENT & LAW ENFORCEMENT INTEGRATION
+    // ========================================
+    
+    // Government report submissions
+    match /government_reports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.submitterId) ||
+        request.auth.token.role == 'law_enforcement'
+      );
+      
+      allow create: if isVerifiedUser() &&
+        hasValidUserData() &&
+        request.resource.data.keys().hasAll([
+          'reportType', 'targetAgency', 'urgencyLevel', 'legalBasis'
+        ]) &&
+        request.resource.data.targetAgency in [
+          'KENYA_POLICE', 'DCI', 'CENTRAL_BANK', 'CAK', 'ODPP'
+        ];
+      
+      allow update: if request.auth.token.role in [
+        'law_enforcement', 'government_official'
+      ] &&
+        // Only status updates allowed
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'lastUpdated', 'officerNotes']);
+      
+      allow delete: if false; // Government reports cannot be deleted
+    }
+    
+    // Law enforcement case tracking
+    match /case_tracking/{caseId} {
+      allow read, write: if request.auth.token.role in [
+        'law_enforcement', 'prosecutor', 'judge'
+      ];
+    }
+    
+    // ========================================
+    // AI SAFETY ASSISTANT DATA
+    // ========================================
+    
+    // AI assistant conversations (user-specific)
+    match /ai_conversations/{userId} {
+      allow read, write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        hasValidUserData();
+    }
+    
+    // AI safety recommendations
+    match /safety_recommendations/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Only AI system can write recommendations
+    }
+    
+    // ========================================
+    // USER PROFILES & SETTINGS
+    // ========================================
+    
+    // User profiles
+    match /users/{userId} {
+      allow read: if isOwner(userId) ||
+        // Public profile fields only
+        (isAuthenticated() && 
+         request.resource.data.keys().hasOnly(['displayName', 'publicStats']));
+      
+      allow create, update: if isOwner(userId) &&
+        isVerifiedUser() &&
+        hasValidUserData() &&
+        // Validate profile structure
+        request.resource.data.keys().hasAll(['email', 'createdAt']) &&
+        request.resource.data.email == request.auth.token.email;
+      
+      allow delete: if false; // Profiles cannot be deleted for compliance
+    }
+    
+    // User security settings
+    match /user_security/{userId} {
+      allow read, write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        hasValidUserData();
+    }
+    
+    // ========================================
+    // WEARABLE & IOT DEVICE DATA
+    // ========================================
+    
+    // Wearable device data
+    match /wearable_data/{userId} {
+      allow read, write: if isOwner(userId) &&
+        isVerifiedUser() &&
+        // Device consent required
+        request.auth.token.device_consent == true;
+    }
+    
+    // Emergency health monitoring
+    match /health_monitoring/{userId} {
+      allow read, write: if isOwner(userId) ||
+        // Emergency services access during active emergency
+        (request.auth.token.role == 'emergency_services' &&
+         resource.data.emergencyActive == true);
+    }
+    
+    // ========================================
+    // OFFLINE EMERGENCY DATA
+    // ========================================
+    
+    // Emergency contact information
+    match /emergency_contacts/{userId} {
+      allow read, write: if isOwner(userId) &&
+        isVerifiedUser();
+    }
+    
+    // Emergency protocols
+    match /emergency_protocols/{userId} {
+      allow read: if isOwner(userId) ||
+        // Emergency services can read during active emergency
+        (request.auth.token.role == 'emergency_services' &&
+         resource.data.emergencyActive == true);
+      
+      allow write: if isOwner(userId) && isVerifiedUser();
+    }
+    
+    // ========================================
+    // SYSTEM & ADMINISTRATIVE DATA
+    // ========================================
+    
+    // System logs (admin only)
+    match /system_logs/{logId} {
+      allow read, write: if request.auth.token.role == 'admin';
+    }
+    
+    // Application metrics
+    match /app_metrics/{metricId} {
+      allow read: if request.auth.token.role in ['admin', 'analyst'];
+      allow write: if false; // Only system can write metrics
+    }
+    
+    // Feature flags and configuration
+    match /app_config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if request.auth.token.role == 'admin';
+    }
+    
+    // ========================================
+    // AUDIT TRAIL & COMPLIANCE
+    // ========================================
+    
+    // Audit trail (immutable)
+    match /audit_trail/{auditId} {
+      allow read: if request.auth.token.role in [
+        'admin', 'compliance_officer', 'auditor'
+      ];
+      allow write: if false; // Only system can write audit logs
+    }
+    
+    // Legal compliance records
+    match /compliance_records/{recordId} {
+      allow read: if request.auth.token.role in [
+        'admin', 'legal_counsel', 'compliance_officer'
+      ];
+      allow write: if request.auth.token.role in [
+        'admin', 'compliance_officer'
+      ];
+    }
+    
+    // ========================================
+    // DEFAULT SECURITY POLICY
+    // ========================================
+    
+    // Explicitly deny access to any unmatched documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
