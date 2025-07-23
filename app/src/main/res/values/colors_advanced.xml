@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SafeNet Shield - Personal Safety & Security Application
+  
+  Copyright (c) 2024 Mark Mikile Mutunga
+  Email: markmiki03@gmail.com
+  Phone: +254 707 678 643
+-->
+
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary_500">#2196F3</color>
+    <color name="primary_600">#1976D2</color>
+    <color name="primary_700">#1565C0</color>
+    
+    <!-- Secondary Colors -->
+    <color name="secondary_500">#FF9800</color>
+    <color name="secondary_600">#F57C00</color>
+    
+    <!-- Success Colors -->
+    <color name="green_500">#4CAF50</color>
+    <color name="green_600">#43A047</color>
+    <color name="green_700">#388E3C</color>
+    
+    <!-- Warning Colors -->
+    <color name="orange_500">#FF9800</color>
+    <color name="yellow_500">#FFEB3B</color>
+    
+    <!-- Error Colors -->
+    <color name="red_300">#E57373</color>
+    <color name="red_500">#F44336</color>
+    <color name="red_700">#D32F2F</color>
+    
+    <!-- Info Colors -->
+    <color name="blue_500">#2196F3</color>
+    <color name="purple_500">#9C27B0</color>
+    
+    <!-- Gray Scale -->
+    <color name="gray_50">#FAFAFA</color>
+    <color name="gray_100">#F5F5F5</color>
+    <color name="gray_200">#EEEEEE</color>
+    <color name="gray_300">#E0E0E0</color>
+    <color name="gray_400">#BDBDBD</color>
+    <color name="gray_500">#9E9E9E</color>
+    <color name="gray_600">#757575</color>
+    <color name="gray_700">#616161</color>
+    <color name="gray_800">#424242</color>
+    <color name="gray_900">#212121</color>
+    
+    <!-- Background Colors -->
+    <color name="background_light">#FAFAFA</color>
+    <color name="background_white">#FFFFFF</color>
+    <color name="surface">#FFFFFF</color>
+    
+    <!-- Card Colors -->
+    <color name="card_stroke">#E0E0E0</color>
+    
+    <!-- Status Colors -->
+    <color name="status_active">#4CAF50</color>
+    <color name="status_inactive">#9E9E9E</color>
+    <color name="status_warning">#FF9800</color>
+    <color name="status_error">#F44336</color>
+    
+    <!-- Dashboard specific colors -->
+    <color name="security_good">#4CAF50</color>
+    <color name="security_warning">#FF9800</color>
+    <color name="security_danger">#F44336</color>
+    <color name="ai_assistant">#9C27B0</color>
+    <color name="community_alert">#2196F3</color>
+    <color name="prediction_high">#FF5722</color>
+    <color name="prediction_medium">#FF9800</color>
+    <color name="prediction_low">#4CAF50</color>
+    
+    <!-- Additional colors needed -->
+    <color name="gray_light">#E0E0E0</color>
+    <color name="primary_variant">#3700B3</color>
+</resources>
