@@ -25,10 +25,15 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
-import com.google.android.gms.wearable.*.*
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.*
 import com.safenet.shield.offline.OfflineEmergencyManager
 import kotlinx.coroutines.*
 import java.util.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.sqrt
 
 /**
@@ -70,6 +75,17 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
     private var heartRateMonitoringEnabled = true
     
     private val wearableScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Helper function to convert Task to suspending function
+    private suspend fun <T> Task<T>.awaitTask(): T = suspendCancellableCoroutine { cont ->
+        addOnCompleteListener { task ->
+            if (task.exception != null) {
+                cont.resumeWithException(task.exception!!)
+            } else {
+                cont.resume(task.result)
+            }
+        }
+    }
 
     data class WearableDevice(
         val nodeId: String,
@@ -183,7 +199,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
      */
     private suspend fun discoverWearableDevices(): List<WearableDevice> {
         return try {
-            val connectedNodes = nodeClient.connectedNodes.await()
+            val connectedNodes = nodeClient.connectedNodes.awaitTask()
             val devices = mutableListOf<WearableDevice>()
             
             for (node in connectedNodes) {
@@ -219,8 +235,8 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
             val capabilities = mutableListOf<WearableCapability>()
             
             // Check for specific capabilities
-            val capabilityInfo = capabilityClient.getCapability("safenet_panic_button", CapabilityClient.FILTER_REACHABLE).await()
-            if (capabilityInfo.nodes.any { it.id == nodeId }) {
+            val capabilityInfo = capabilityClient.getCapability("safenet_panic_button", CapabilityClient.FILTER_REACHABLE).awaitTask()
+            if (capabilityInfo.nodes.any { node -> node.id == nodeId }) {
                 capabilities.add(WearableCapability.PANIC_BUTTON)
             }
             
@@ -275,7 +291,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
             }
             
             val putDataRequest = dataMap.asPutDataRequest().setUrgent()
-            dataClient.putDataItem(putDataRequest).await()
+            dataClient.putDataItem(putDataRequest).awaitTask()
             
             Log.d(TAG, "Safety state sent to device: ${device.displayName}")
             Result.success(true)
@@ -319,7 +335,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
     private suspend fun sendPanicConfirmationToWearable(nodeId: String) {
         try {
             val confirmationMessage = "Panic alert activated. Emergency contacts notified."
-            messageClient.sendMessage(nodeId, PANIC_BUTTON_PATH, confirmationMessage.toByteArray()).await()
+            messageClient.sendMessage(nodeId, PANIC_BUTTON_PATH, confirmationMessage.toByteArray()).awaitTask()
             
             Log.d(TAG, "Panic confirmation sent to wearable")
         } catch (e: Exception) {
@@ -332,7 +348,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
      */
     private suspend fun updateSafetyStateOnAllDevices(safetyLevel: SafetyLevel) {
         try {
-            val connectedNodes = nodeClient.connectedNodes.await()
+            val connectedNodes = nodeClient.connectedNodes.awaitTask()
             
             for (node in connectedNodes) {
                 val dataMap = PutDataMapRequest.create(SAFETY_STATUS_PATH).apply {
@@ -342,7 +358,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
                 }
                 
                 val putDataRequest = dataMap.asPutDataRequest().setUrgent()
-                dataClient.putDataItem(putDataRequest).await()
+                dataClient.putDataItem(putDataRequest).awaitTask()
             }
             
             Log.d(TAG, "Safety state updated on all devices: $safetyLevel")
@@ -410,7 +426,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
      */
     private suspend fun sendHealthAlertsToWearables(alerts: List<HealthAlert>) {
         try {
-            val connectedNodes = nodeClient.connectedNodes.await()
+            val connectedNodes = nodeClient.connectedNodes.awaitTask()
             
             for (node in connectedNodes) {
                 val alertMessage = alerts.firstOrNull { it.severity == AlertSeverity.CRITICAL }
@@ -421,7 +437,7 @@ class WearableIntegrationManager(private val context: Context) : SensorEventList
                     node.id,
                     HEALTH_MONITOR_PATH,
                     alertMessage.description.toByteArray()
-                ).await()
+                ).awaitTask()
             }
             
             Log.d(TAG, "Health alerts sent to wearables")
