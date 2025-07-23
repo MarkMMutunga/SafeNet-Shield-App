@@ -16,10 +16,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    function isValidTimestamp(timestamp) {
-      return timestamp is timestamp && 
-             timestamp > timestamp.value(2024, 1, 1) && 
-             timestamp < timestamp.value(2030, 12, 31);
+    function isValidTimestamp(ts) {
+      return ts is timestamp && 
+             ts > timestamp.value(2024, 1, 1) && 
+             ts < timestamp.value(2030, 12, 31);
     }
     
     function hasValidUserData() {
