@@ -20,8 +20,21 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Security: Disable debugging and logging in release
+            debuggable false
+            renderscriptDebuggable false
+            
+            // Enable zipalign for better performance
+            zipAlignEnabled true
+        }
+        debug {
+            // Keep debugging enabled for development
+            debuggable true
+            minifyEnabled false
         }
     }
     compileOptions {

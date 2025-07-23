@@ -12,7 +12,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.safenet.shield.MainActivity
 import com.safenet.shield.databinding.ActivityRegisterBinding
-import com.safenet.shield.utils.PhoneNumberValidator
+import com.safenet.shield.utils.ValidationUtils
 
 class RegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRegisterBinding
@@ -99,35 +99,32 @@ class RegisterActivity : AppCompatActivity() {
             val password = binding.passwordEditText.text.toString()
             val confirmPassword = binding.confirmPasswordEditText.text.toString()
 
-            if (firstName.isEmpty()) {
-                binding.firstNameInput.error = "First name is required"
+            // Enhanced name validation
+            if (!ValidationUtils.isValidName(firstName)) {
+                binding.firstNameInput.error = "Please enter a valid first name (2-50 characters, letters only)"
                 return false
             }
             binding.firstNameInput.error = null
 
-            if (lastName.isEmpty()) {
-                binding.lastNameInput.error = "Last name is required"
+            if (!ValidationUtils.isValidName(lastName)) {
+                binding.lastNameInput.error = "Please enter a valid last name (2-50 characters, letters only)"
                 return false
             }
             binding.lastNameInput.error = null
 
-            if (email.isEmpty()) {
-                binding.emailInput.error = "Email is required"
+            // Enhanced email validation
+            if (!ValidationUtils.isValidEmail(email)) {
+                binding.emailInput.error = "Please enter a valid email address"
                 return false
             }
             binding.emailInput.error = null
 
-            if (password.isEmpty()) {
-                binding.passwordInput.error = "Password is required"
+            // Enhanced password validation
+            if (!ValidationUtils.isValidPassword(password)) {
+                binding.passwordInput.error = ValidationUtils.getPasswordStrengthMessage(password)
                 return false
             }
             binding.passwordInput.error = null
-
-            if (confirmPassword.isEmpty()) {
-                binding.confirmPasswordInput.error = "Please confirm your password"
-                return false
-            }
-            binding.confirmPasswordInput.error = null
 
             if (password != confirmPassword) {
                 binding.confirmPasswordInput.error = "Passwords do not match"
@@ -135,8 +132,10 @@ class RegisterActivity : AppCompatActivity() {
             }
             binding.confirmPasswordInput.error = null
 
-            if (password.length < 6) {
-                binding.passwordInput.error = "Password must be at least 6 characters"
+            // Security: Check for injection attempts
+            val inputs = listOf(firstName, lastName, email)
+            if (inputs.any { ValidationUtils.containsSqlInjection(it) }) {
+                Toast.makeText(this, "Invalid input detected", Toast.LENGTH_SHORT).show()
                 return false
             }
 

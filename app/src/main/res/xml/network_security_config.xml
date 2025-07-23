@@ -6,13 +6,26 @@
         </trust-anchors>
     </base-config>
     
+    <!-- Firebase domains -->
+    <domain-config>
+        <domain includeSubdomains="true">firebase.googleapis.com</domain>
+        <domain includeSubdomains="true">firestore.googleapis.com</domain>
+        <domain includeSubdomains="true">firebasestorage.googleapis.com</domain>
+        <domain includeSubdomains="true">identitytoolkit.googleapis.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+    
+    <!-- Your API domain -->
     <domain-config>
         <domain includeSubdomains="true">api.safenet-shield.com</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
-        <pin-set expiration="2024-12-31">
-            <!-- Add your certificate pins here -->
+        <pin-set expiration="2026-07-23">
+            <!-- Add your certificate pins here for enhanced security -->
+            <!-- Generate pins using: openssl x509 -in certificate.crt -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | base64 -->
         </pin-set>
     </domain-config>
 </network-security-config> 

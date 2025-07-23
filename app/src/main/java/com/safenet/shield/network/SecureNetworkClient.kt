@@ -5,11 +5,6 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 import java.util.concurrent.TimeUnit
 
 object SecureNetworkClient {
@@ -18,37 +13,16 @@ object SecureNetworkClient {
     private const val TIMEOUT_SECONDS = 30L
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        // Only log in debug builds to prevent sensitive data exposure
+        level = HttpLoggingInterceptor.Level.NONE // Disabled for security
     }
 
-    private val trustManager = object : X509TrustManager {
-        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
-            Log.d(TAG, "Checking client trusted: $authType")
-        }
-        
-        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
-            Log.d(TAG, "Checking server trusted: $authType")
-        }
-        
-        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-    }
-
-    private val sslContext = try {
-        SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
-        }
-    } catch (e: Exception) {
-        Log.e(TAG, "Error initializing SSL context", e)
-        throw e
-    }
-
+    // Removed insecure custom TrustManager - using system default for proper certificate validation
+    
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
-        .sslSocketFactory(sslContext.socketFactory, trustManager)
-        .hostnameVerifier { hostname, session -> 
-            Log.d(TAG, "Verifying hostname: $hostname")
-            true // In production, implement proper hostname verification
-        }
+        // Using system default SSL configuration for proper certificate validation
+        // Using system default SSL configuration for proper certificate validation
         .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)

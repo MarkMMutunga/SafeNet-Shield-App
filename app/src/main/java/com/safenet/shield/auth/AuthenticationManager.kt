@@ -23,9 +23,8 @@ object AuthenticationManager {
     fun init(context: Context) {
         try {
             prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            if (!hasUsers()) {
-                addDefaultUser()
-            }
+            // Removed automatic default user creation for security
+            // Admin users should be created through a secure setup process
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing AuthenticationManager", e)
             // Don't throw the exception, just log it
@@ -41,20 +40,7 @@ object AuthenticationManager {
         }
     }
 
-    private fun addDefaultUser() {
-        try {
-            val defaultUser = User(
-                email = "admin@safenet.com",
-                passwordHash = PasswordUtils.hashPassword("Admin@123"),
-                is2FAEnabled = false,
-                twoFASecret = null
-            )
-            saveUser(defaultUser)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error creating default user", e)
-            // Don't throw the exception, just log it
-        }
-    }
+    // Removed addDefaultUser() method for security - no hardcoded admin accounts
 
     fun authenticate(email: String, password: String): AuthResult {
         return try {

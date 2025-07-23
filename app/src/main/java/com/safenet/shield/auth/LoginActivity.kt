@@ -12,6 +12,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.safenet.shield.MainActivity
 import com.safenet.shield.R
 import com.safenet.shield.databinding.ActivityLoginBinding
+import com.safenet.shield.utils.ValidationUtils
 import com.safenet.shield.utils.SecurityUtils
 
 class LoginActivity : AppCompatActivity() {
@@ -127,13 +128,30 @@ class LoginActivity : AppCompatActivity() {
             val email = binding.emailEditText.text.toString()
             val password = binding.passwordEditText.text.toString()
 
+            // Enhanced email validation
             if (email.isEmpty()) {
                 binding.emailInput.error = "Email is required"
                 return false
             }
 
+            if (!ValidationUtils.isValidEmail(email)) {
+                binding.emailInput.error = "Please enter a valid email address"
+                return false
+            }
+
+            // Enhanced password validation
             if (password.isEmpty()) {
                 binding.passwordInput.error = "Password is required"
+                return false
+            }
+
+            // Sanitize inputs to prevent injection attacks
+            val sanitizedEmail = ValidationUtils.sanitizeInput(email)
+            val sanitizedPassword = ValidationUtils.sanitizeInput(password)
+
+            if (ValidationUtils.containsSqlInjection(sanitizedEmail) || 
+                ValidationUtils.containsSqlInjection(sanitizedPassword)) {
+                Toast.makeText(this, "Invalid input detected", Toast.LENGTH_SHORT).show()
                 return false
             }
 

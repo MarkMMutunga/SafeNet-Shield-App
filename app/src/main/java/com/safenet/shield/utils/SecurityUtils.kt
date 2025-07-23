@@ -2,7 +2,9 @@ package com.safenet.shield.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
 import android.util.Log
+import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 
 class SecurityUtils private constructor(context: Context) {
@@ -208,8 +210,11 @@ class SecurityUtils private constructor(context: Context) {
 
     fun createSession(username: String): String {
         try {
-            // Generate a simple session token (in a real app, this should be more secure)
-            val token = "${username}_${System.currentTimeMillis()}"
+            // Generate a cryptographically secure session token
+            val secureRandom = SecureRandom()
+            val tokenBytes = ByteArray(32) // 256-bit token
+            secureRandom.nextBytes(tokenBytes)
+            val token = Base64.encodeToString(tokenBytes, Base64.NO_WRAP)
             setSession(token)
             return token
         } catch (e: Exception) {

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "532580982236",
-    "project_id": "safenet-87e1c",
-    "storage_bucket": "safenet-87e1c.firebasestorage.app"
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_PROJECT_ID.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:532580982236:android:e7473600c9af7ce9894319",
+        "mobilesdk_app_id": "YOUR_MOBILE_SDK_APP_ID",
         "android_client_info": {
           "package_name": "com.safenet.shield"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAvWyhixIdjn2loRIVb5XO6ery7bw61mA0"
+          "current_key": "YOUR_API_KEY_HERE"
         }
       ],
       "services": {
@@ -26,4 +26,4 @@
     }
   ],
   "configuration_version": "1"
-} 
+}

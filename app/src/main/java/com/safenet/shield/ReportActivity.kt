@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.safenet.shield.databinding.ActivityReportBinding
 import com.safenet.shield.databinding.ItemAttachmentBinding
 import com.safenet.shield.data.LocationData
+import com.safenet.shield.utils.ValidationUtils
 import java.io.File
 import java.io.FileOutputStream
 import com.google.firebase.auth.FirebaseAuth
@@ -67,7 +70,6 @@ class ReportActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityReportBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         setupUI()
     }
 
@@ -148,31 +150,25 @@ class ReportActivity : AppCompatActivity() {
             binding.emergencyButton.setOnClickListener {
                 startActivity(Intent(this, EmergencyContactsActivity::class.java))
             }
+
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up UI", e)
-            Toast.makeText(this, "Error setting up the form", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error setting up UI", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun checkPermissionsAndOpenPicker(mimeType: String) {
         val permissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.READ_MEDIA_IMAGES
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO
         )
-        
-        if (permissions.all {
-                ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-            }) {
-            openFilePicker(mimeType)
-        } else {
-            requestPermissionLauncher.launch(permissions)
-        }
+        requestPermissionLauncher.launch(permissions)
     }
 
     private fun openFilePicker(mimeType: String = "*/*") {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
             type = mimeType
-            addCategory(Intent.CATEGORY_OPENABLE)
         }
         pickFileLauncher.launch(intent)
     }
@@ -186,60 +182,94 @@ class ReportActivity : AppCompatActivity() {
         try {
             val fileName = getFileName(uri)
             val fileType = getFileType(fileName)
-            attachments.add(Attachment(fileName, uri, fileType))
+            val attachment = Attachment(fileName, uri, fileType)
+            attachments.add(attachment)
             attachmentsAdapter.notifyItemInserted(attachments.size - 1)
         } catch (e: Exception) {
             Log.e(TAG, "Error handling selected file", e)
-            Toast.makeText(this, "Error attaching file", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error processing file", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun saveBitmapToFile(bitmap: android.graphics.Bitmap) {
         try {
-            val fileName = "photo_${System.currentTimeMillis()}.jpg"
-            val file = File(cacheDir, fileName)
+            val file = File(cacheDir, "photo_${System.currentTimeMillis()}.jpg")
             FileOutputStream(file).use { out ->
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, out)
             }
-            attachments.add(Attachment(fileName, Uri.fromFile(file), AttachmentType.IMAGE))
-            attachmentsAdapter.notifyItemInserted(attachments.size - 1)
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this, "${packageName}.provider", file
+            )
+            handleSelectedFile(uri)
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving photo", e)
-            Toast.makeText(this, "Error saving photo", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error saving bitmap", e)
         }
     }
 
     private fun getFileName(uri: Uri): String {
-        val cursor = contentResolver.query(uri, null, null, null, null)
-        return cursor?.use {
-            val nameIndex = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
-            it.moveToFirst()
-            it.getString(nameIndex)
-        } ?: "Unknown file"
+        var fileName = "attachment_${System.currentTimeMillis()}"
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0) {
+                    fileName = cursor.getString(nameIndex) ?: fileName
+                }
+            }
+        }
+        return fileName
     }
 
     private fun getFileType(fileName: String): AttachmentType {
-        return when (fileName.substringAfterLast('.').lowercase()) {
+        return when (fileName.substringAfterLast(".", "").lowercase()) {
             "jpg", "jpeg", "png", "gif" -> AttachmentType.IMAGE
-            "pdf" -> AttachmentType.PDF
+            "pdf", "doc", "docx", "txt" -> AttachmentType.DOCUMENT
             else -> AttachmentType.OTHER
         }
     }
 
     private fun submitReport() {
         try {
-            val incidentType = binding.incidentTypeInput.text.toString()
-            val description = binding.descriptionInput.text.toString()
-            val country = binding.countryDropdown.text.toString()
-            val city = binding.cityDropdown.text.toString()
-            val contact = binding.contactInput.text.toString()
-            val countryCode = binding.countryCodeDropdown.text.toString()
+            val incidentType = binding.incidentTypeInput.text.toString().trim()
+            val description = binding.descriptionInput.text.toString().trim()
+            val country = binding.countryDropdown.text.toString().trim()
+            val city = binding.cityDropdown.text.toString().trim()
+            val contact = binding.contactInput.text.toString().trim()
+            val countryCode = binding.countryCodeDropdown.text.toString().trim()
 
-            // Basic validation
-            if (incidentType.isEmpty() || description.isEmpty()) {
-                Toast.makeText(this, "Please fill in all required fields", Toast.LENGTH_SHORT).show()
+            // Enhanced validation using ValidationUtils
+            if (incidentType.isEmpty()) {
+                binding.incidentTypeInput.error = "Incident type is required"
                 return
             }
+
+            if (!ValidationUtils.isValidReportContent(description)) {
+                binding.descriptionInput.error = "Please provide a detailed description (10-5000 characters)"
+                return
+            }
+
+            // Validate location
+            if (country.isEmpty()) {
+                Toast.makeText(this, "Please select a country", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            // Validate contact if provided
+            if (contact.isNotEmpty() && !ValidationUtils.isValidPhoneNumber(contact)) {
+                binding.contactInput.error = "Please enter a valid phone number"
+                return
+            }
+
+            // Security: Sanitize inputs and check for injection attempts
+            val sanitizedInputs = listOf(incidentType, description, country, city, contact)
+            if (sanitizedInputs.any { ValidationUtils.containsSqlInjection(it) }) {
+                Toast.makeText(this, "Invalid input detected", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            // Clear errors
+            binding.incidentTypeInput.error = null
+            binding.descriptionInput.error = null
+            binding.contactInput.error = null
 
             // Format phone number if provided
             val formattedContact = if (contact.isNotEmpty() && countryCode.isNotEmpty()) {
@@ -256,15 +286,16 @@ class ReportActivity : AppCompatActivity() {
                 return
             }
 
-            // Create report data
+            // Create report data with sanitized inputs
             val report = hashMapOf(
-                "title" to incidentType,
-                "description" to description,
-                "country" to country,
-                "city" to city,
+                "title" to ValidationUtils.sanitizeInput(incidentType),
+                "description" to ValidationUtils.sanitizeInput(description),
+                "country" to ValidationUtils.sanitizeInput(country),
+                "city" to ValidationUtils.sanitizeInput(city),
                 "contact" to formattedContact,
                 "timestamp" to System.currentTimeMillis(),
-                "userId" to currentUser.uid
+                "userId" to currentUser.uid,
+                "status" to "pending"
             )
 
             // Add report to Firestore
@@ -273,56 +304,61 @@ class ReportActivity : AppCompatActivity() {
                 .addOnSuccessListener { documentReference ->
                     // Handle attachments if any
                     if (attachments.isNotEmpty()) {
-                        val storageRef = FirebaseStorage.getInstance().reference
-                        attachments.forEach { attachment ->
-                            val fileRef = storageRef.child("reports/${documentReference.id}/${attachment.name}")
-                            contentResolver.openInputStream(attachment.uri)?.use { inputStream ->
-                                fileRef.putStream(inputStream)
-                                    .addOnSuccessListener {
-                                        Log.d(TAG, "Attachment uploaded successfully")
-                                    }
-                                    .addOnFailureListener { e ->
-                                        Log.e(TAG, "Error uploading attachment", e)
-                                    }
-                            }
-                        }
-                    }
-
-                    // Show success message
-                    val location = if (country.isNotEmpty() && city.isNotEmpty()) {
-                        "$city, $country"
-                    } else if (country.isNotEmpty()) {
-                        country
+                        uploadAttachments(documentReference.id)
                     } else {
-                        "Location not specified"
+                        // No attachments, show success message
+                        Toast.makeText(this, "Report submitted successfully", Toast.LENGTH_SHORT).show()
+                        finish()
                     }
-                    
-                    val attachmentCount = attachments.size
-                    Toast.makeText(this, 
-                        "Report submitted successfully from $location with $attachmentCount attachments", 
-                        Toast.LENGTH_SHORT).show()
-                    
-                    // Clear the form
-                    binding.incidentTypeInput.text?.clear()
-                    binding.descriptionInput.text?.clear()
-                    binding.countryDropdown.text?.clear()
-                    binding.cityDropdown.text?.clear()
-                    binding.countryCodeDropdown.text?.clear()
-                    binding.contactInput.text?.clear()
-                    attachments.clear()
-                    attachmentsAdapter.notifyDataSetChanged()
-
-                    // Navigate back to main activity
-                    finish()
                 }
                 .addOnFailureListener { e ->
-                    Log.e(TAG, "Error submitting report", e)
-                    Toast.makeText(this, "Error submitting report: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Log.e(TAG, "Error adding report", e)
+                    Toast.makeText(this, "Failed to submit report: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error submitting report", e)
+            Log.e(TAG, "Error in submitReport", e)
             Toast.makeText(this, "Error submitting report", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun uploadAttachments(reportId: String) {
+        try {
+            val storageRef = FirebaseStorage.getInstance().reference
+            var uploadedCount = 0
+            val totalAttachments = attachments.size
+
+            attachments.forEach { attachment ->
+                // Validate file type for security
+                val allowedTypes = listOf("jpg", "jpeg", "png", "pdf", "doc", "docx")
+                if (!ValidationUtils.isValidFileType(attachment.name, allowedTypes)) {
+                    Toast.makeText(this, "File type ${attachment.name} not allowed", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                val fileRef = storageRef.child("reports/$reportId/${attachment.name}")
+                contentResolver.openInputStream(attachment.uri)?.use { inputStream ->
+                    fileRef.putStream(inputStream)
+                        .addOnSuccessListener {
+                            uploadedCount++
+                            if (uploadedCount == totalAttachments) {
+                                Toast.makeText(this, "Report submitted successfully with attachments", Toast.LENGTH_SHORT).show()
+                                finish()
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Error uploading attachment: ${attachment.name}", e)
+                            uploadedCount++
+                            if (uploadedCount == totalAttachments) {
+                                Toast.makeText(this, "Report submitted with some upload failures", Toast.LENGTH_SHORT).show()
+                                finish()
+                            }
+                        }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading attachments", e)
+            Toast.makeText(this, "Error uploading attachments", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -333,29 +369,27 @@ class ReportActivity : AppCompatActivity() {
     )
 
     enum class AttachmentType {
-        IMAGE, PDF, OTHER
+        IMAGE, DOCUMENT, OTHER
     }
 
     inner class AttachmentsAdapter(
-        private val items: List<Attachment>,
+        private val items: MutableList<Attachment>,
         private val onRemove: (Int) -> Unit
     ) : RecyclerView.Adapter<AttachmentsAdapter.ViewHolder>() {
 
-        inner class ViewHolder(private val binding: ItemAttachmentBinding) : 
-            RecyclerView.ViewHolder(binding.root) {
-            
+        inner class ViewHolder(private val binding: ItemAttachmentBinding) : RecyclerView.ViewHolder(binding.root) {
             fun bind(attachment: Attachment) {
                 binding.attachmentName.text = attachment.name
-                binding.attachmentIcon.setImageResource(R.drawable.ic_attachment)
+                // Remove the attachmentType line as it doesn't exist in the layout
                 binding.removeButton.setOnClickListener {
                     onRemove(adapterPosition)
                 }
             }
         }
 
-        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val binding = ItemAttachmentBinding.inflate(
-                layoutInflater, parent, false
+                LayoutInflater.from(parent.context), parent, false
             )
             return ViewHolder(binding)
         }
@@ -366,4 +400,4 @@ class ReportActivity : AppCompatActivity() {
 
         override fun getItemCount() = items.size
     }
-} 
+}

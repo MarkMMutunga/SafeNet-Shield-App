@@ -1,3 +1,4 @@
+# Android Studio / IntelliJ IDEA
 *.iml
 .gradle
 /local.properties
@@ -7,9 +8,67 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/misc.xml
+/.idea/gradle.xml
+/.idea/vcs.xml
+/.idea/deploymentTargetDropDown.xml
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build outputs
 /build
+/app/build
 /captures
 .externalNativeBuild
 .cxx
+
+# Gradle
+gradle.properties
 local.properties
+
+# Firebase & Google Services (SENSITIVE - Contains API keys)
+google-services.json
+app/google-services.json
+
+# Keystore files (SENSITIVE - Contains signing keys)
+*.keystore
+*.jks
+key.properties
+keystore.properties
+
+# API Keys and Secrets (SENSITIVE)
+secrets.properties
+api_keys.properties
+config.properties
+
+# Local configuration files
+local.properties
+gradle.properties
+
+# Logs
+*.log
+
+# Android Profiling
+*.hprof
+
+# Kotlin
+*.kt.bak
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Generated files
+app/src/main/java/**/BuildConfig.java
+app/src/main/java/**/R.java
+
+# Security documentation with sensitive info
+FIREBASE_SECURITY_NOTICE.md
