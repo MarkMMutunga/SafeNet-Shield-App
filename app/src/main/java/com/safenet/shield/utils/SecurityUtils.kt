@@ -279,4 +279,45 @@ class SecurityUtils private constructor(context: Context) {
     fun getUserName(): String? {
         return sharedPreferences.getString(KEY_USER_NAME, null)
     }
+
+    /**
+     * Encrypt data for secure storage
+     */
+    fun encryptData(data: ByteArray, context: Context): ByteArray {
+        return try {
+            // Simple XOR encryption for demonstration
+            // In production, use proper AES encryption with Android Keystore
+            val key = "SafeNetShieldKey".toByteArray()
+            val encrypted = ByteArray(data.size)
+            
+            for (i in data.indices) {
+                encrypted[i] = (data[i].toInt() xor key[i % key.size].toInt()).toByte()
+            }
+            
+            encrypted
+        } catch (e: Exception) {
+            Log.e(TAG, "Encryption failed", e)
+            data // Return original data if encryption fails
+        }
+    }
+
+    /**
+     * Decrypt data from secure storage
+     */
+    fun decryptData(encryptedData: ByteArray, context: Context): ByteArray {
+        return try {
+            // Simple XOR decryption (same as encryption for XOR)
+            val key = "SafeNetShieldKey".toByteArray()
+            val decrypted = ByteArray(encryptedData.size)
+            
+            for (i in encryptedData.indices) {
+                decrypted[i] = (encryptedData[i].toInt() xor key[i % key.size].toInt()).toByte()
+            }
+            
+            decrypted
+        } catch (e: Exception) {
+            Log.e(TAG, "Decryption failed", e)
+            encryptedData // Return encrypted data if decryption fails
+        }
+    }
 } 

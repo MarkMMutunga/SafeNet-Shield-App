@@ -27,18 +27,24 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import com.safenet.shield.databinding.ActivityReportBinding
 import com.safenet.shield.databinding.ItemAttachmentBinding
 import com.safenet.shield.data.LocationData
 import com.safenet.shield.utils.ValidationUtils
+import com.safenet.shield.cybercrime.CybercrimeReportingSystem
+import com.safenet.shield.cybercrime.EvidenceManager
+import com.safenet.shield.cybercrime.MpesaScamDetector
 import java.io.File
 import java.io.FileOutputStream
 import com.google.firebase.auth.FirebaseAuth
@@ -48,6 +54,12 @@ import com.google.firebase.storage.FirebaseStorage
 class ReportActivity : AppCompatActivity() {
     private lateinit var binding: ActivityReportBinding
     private val TAG = "ReportActivity"
+    
+    // Enhanced cybercrime reporting components
+    private lateinit var cybercrimeSystem: CybercrimeReportingSystem
+    private lateinit var evidenceManager: EvidenceManager
+    private lateinit var mpesaScamDetector: MpesaScamDetector
+    private var selectedCybercrimeType: CybercrimeReportingSystem.CybercrimeType? = null
     private var selectedCountry: String? = null
     private val attachments = mutableListOf<Attachment>()
     private lateinit var attachmentsAdapter: AttachmentsAdapter
@@ -89,11 +101,21 @@ class ReportActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityReportBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        // Initialize cybercrime components
+        cybercrimeSystem = CybercrimeReportingSystem(this)
+        evidenceManager = EvidenceManager(this)
+        mpesaScamDetector = MpesaScamDetector(this)
+        
         setupUI()
+        setupCybercrimeTypes()
     }
 
     private fun setupUI() {
         try {
+            // Set up cybercrime type selection
+            setupCybercrimeTypeSelection()
+            
             // Set up attachments RecyclerView
             attachmentsAdapter = AttachmentsAdapter(attachments) { position ->
                 attachments.removeAt(position)
@@ -104,7 +126,7 @@ class ReportActivity : AppCompatActivity() {
                 adapter = attachmentsAdapter
             }
 
-            // Set up attachment buttons
+            // Set up attachment buttons with enhanced evidence management
             binding.attachImageButton.setOnClickListener {
                 checkPermissionsAndOpenPicker("image/*")
             }
@@ -176,6 +198,115 @@ class ReportActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupCybercrimeTypes() {
+        // Add cybercrime type chips to the UI
+        val cybercrimeTypes = CybercrimeReportingSystem.CybercrimeType.values()
+        
+        // This would be added to a ChipGroup in the layout
+        // For now, we'll use the existing incident type field
+        val typeNames = cybercrimeTypes.map { type ->
+            type.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
+        }
+        
+        val typeAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_dropdown_item_1line,
+            typeNames
+        )
+        // Assuming we add this to an existing dropdown or create a new one
+    }
+
+    private fun setupCybercrimeTypeSelection() {
+        // Quick access buttons for common cybercrime types
+        // These would be implemented as chips or buttons in the actual UI
+        
+        // For M-Pesa scam detection
+        binding.incidentTypeInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val title = binding.incidentTypeInput.text.toString()
+                val description = binding.descriptionInput.text.toString()
+                
+                // Check if this might be an M-Pesa scam
+                if (title.lowercase().contains("mpesa") || 
+                    description.lowercase().contains("mpesa")) {
+                    suggestMpesaScamDetection(description)
+                }
+            }
+        }
+    }
+
+    private fun suggestMpesaScamDetection(message: String) {
+        val analysis = mpesaScamDetector.analyzeSmsMessage(message)
+        
+        if (analysis.isLikelyScam && analysis.confidenceLevel > 0.6) {
+            AlertDialog.Builder(this)
+                .setTitle("Possible M-Pesa Scam Detected")
+                .setMessage("Our system detected this might be an M-Pesa scam with ${(analysis.confidenceLevel * 100).toInt()}% confidence. Would you like to use the M-Pesa scam reporting template?")
+                .setPositiveButton("Use Template") { _, _ ->
+                    loadMpesaScamTemplate(analysis)
+                }
+                .setNegativeButton("Continue Manually", null)
+                .show()
+        }
+    }
+
+    private fun loadMpesaScamTemplate(analysis: MpesaScamDetector.ScamAnalysis) {
+        selectedCybercrimeType = CybercrimeReportingSystem.CybercrimeType.MPESA_SCAM
+        val template = cybercrimeSystem.createQuickReportTemplate(selectedCybercrimeType!!)
+        
+        // Update UI with template information
+        binding.incidentTypeInput.setText(template.title)
+        
+        // Add detected risk factors to description
+        val descriptionBuilder = StringBuilder()
+        descriptionBuilder.appendLine("DETECTED SCAM PATTERNS:")
+        analysis.riskFactors.forEach { factor ->
+            descriptionBuilder.appendLine("• ${factor.description}")
+        }
+        descriptionBuilder.appendLine("\nORIGINAL DESCRIPTION:")
+        descriptionBuilder.append(binding.descriptionInput.text.toString())
+        
+        binding.descriptionInput.setText(descriptionBuilder.toString())
+        
+        // Show recommendations
+        showScamRecommendations(analysis.recommendations)
+    }
+
+    private fun showScamRecommendations(recommendations: List<String>) {
+        val recommendationText = recommendations.joinToString("\n• ", "RECOMMENDATIONS:\n• ")
+        
+        AlertDialog.Builder(this)
+            .setTitle("Security Recommendations")
+            .setMessage(recommendationText)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    private fun loadCybercrimeTemplate(type: CybercrimeReportingSystem.CybercrimeType) {
+        selectedCybercrimeType = type
+        val template = cybercrimeSystem.createQuickReportTemplate(type)
+        
+        // Update title
+        binding.incidentTypeInput.setText(template.title)
+        
+        // Create guided questions dialog
+        showGuidedQuestionsDialog(template)
+    }
+
+    private fun showGuidedQuestionsDialog(template: CybercrimeReportingSystem.ReportTemplate) {
+        // This would create a multi-step dialog for guided questions
+        // For now, we'll show the evidence requirements
+        
+        val evidenceText = template.requiredEvidence.joinToString("\n• ", "REQUIRED EVIDENCE:\n• ")
+        val actionsText = template.suggestedActions.joinToString("\n• ", "\n\nSUGGESTED ACTIONS:\n• ")
+        
+        AlertDialog.Builder(this)
+            .setTitle("${template.title} - Guidance")
+            .setMessage(evidenceText + actionsText)
+            .setPositiveButton("Continue", null)
+            .show()
+    }
+
     private fun checkPermissionsAndOpenPicker(mimeType: String) {
         val permissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -201,12 +332,80 @@ class ReportActivity : AppCompatActivity() {
         try {
             val fileName = getFileName(uri)
             val fileType = getFileType(fileName)
-            val attachment = Attachment(fileName, uri, fileType)
-            attachments.add(attachment)
-            attachmentsAdapter.notifyItemInserted(attachments.size - 1)
+            
+            // Enhanced evidence processing with security analysis
+            val mimeType = contentResolver.getType(uri) ?: "unknown"
+            
+            // Check if it's a screenshot that might need analysis
+            if (mimeType.startsWith("image/")) {
+                analyzeImageEvidence(uri, fileName, fileType)
+            } else {
+                storeEvidenceSecurely(uri, fileName, fileType, "Document evidence")
+            }
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error handling selected file", e)
             Toast.makeText(this, "Error processing file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun analyzeImageEvidence(uri: Uri, fileName: String, fileType: AttachmentType) {
+        try {
+            // Load bitmap for analysis
+            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
+            val analysis = evidenceManager.analyzeScreenshot(bitmap)
+            
+            if (analysis.hasWarnings) {
+                // Show warning dialog with suggestions
+                val warningMessage = analysis.warnings.joinToString("\n• ", "PRIVACY WARNINGS:\n• ") +
+                    "\n\n" + analysis.suggestions.joinToString("\n• ", "SUGGESTIONS:\n• ")
+                
+                AlertDialog.Builder(this)
+                    .setTitle("Screenshot Privacy Check")
+                    .setMessage(warningMessage)
+                    .setPositiveButton("Continue Anyway") { _, _ ->
+                        storeEvidenceSecurely(uri, fileName, fileType, "Screenshot evidence (privacy reviewed)")
+                    }
+                    .setNegativeButton("Choose Different Image") { _, _ ->
+                        // Do nothing, let user select a different image
+                    }
+                    .show()
+            } else {
+                storeEvidenceSecurely(uri, fileName, fileType, "Screenshot evidence")
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error analyzing image evidence", e)
+            // Fallback to normal processing
+            storeEvidenceSecurely(uri, fileName, fileType, "Image evidence")
+        }
+    }
+
+    private fun storeEvidenceSecurely(uri: Uri, fileName: String, fileType: AttachmentType, description: String) {
+        // Store evidence using the enhanced evidence manager
+        val storeResult = evidenceManager.storeEvidence(
+            uri = uri,
+            description = description,
+            isAnonymous = false // This could be based on user preference
+        )
+        
+        storeResult.onSuccess { metadata ->
+            // Create attachment with evidence ID
+            val attachment = Attachment(fileName, uri, fileType, metadata.id)
+            attachments.add(attachment)
+            attachmentsAdapter.notifyItemInserted(attachments.size - 1)
+            
+            Toast.makeText(this, "Evidence secured: ${metadata.id}", Toast.LENGTH_SHORT).show()
+            Log.i(TAG, "Evidence stored with ID: ${metadata.id}")
+            
+        }.onFailure { exception ->
+            Log.e(TAG, "Failed to store evidence securely", exception)
+            // Fallback to basic attachment handling
+            val attachment = Attachment(fileName, uri, fileType)
+            attachments.add(attachment)
+            attachmentsAdapter.notifyItemInserted(attachments.size - 1)
+            
+            Toast.makeText(this, "File attached (basic mode)", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -384,7 +583,8 @@ class ReportActivity : AppCompatActivity() {
     data class Attachment(
         val name: String,
         val uri: Uri,
-        val type: AttachmentType
+        val type: AttachmentType,
+        val evidenceId: String? = null // Enhanced evidence tracking
     )
 
     enum class AttachmentType {
