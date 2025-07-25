@@ -1,7 +1,7 @@
 /*
  * SafeNet Shield - Personal Safety & Security Application
  * 
- * Copyright (c) 2024 Mark Mikile Mutunga
+ * Copyright (c) 2025 Mark Mikile Mutunga
  * Email: markmiki03@gmail.com
  * Phone: +254 707 678 643
  * 
