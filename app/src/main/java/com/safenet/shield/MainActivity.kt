@@ -99,6 +99,31 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, EmergencyContactsActivity::class.java))
             }
 
+            // Set up AI Assistant button
+            binding.aiAssistantButton.setOnClickListener {
+                startActivity(Intent(this, AIAssistantActivity::class.java))
+            }
+
+            // Set up Community Intelligence button
+            binding.communityButton.setOnClickListener {
+                startActivity(Intent(this, CommunityActivity::class.java))
+            }
+
+            // Set up Government Services button
+            binding.governmentButton.setOnClickListener {
+                startActivity(Intent(this, GovernmentActivity::class.java))
+            }
+
+            // Set up Blockchain Evidence button
+            binding.blockchainButton.setOnClickListener {
+                startActivity(Intent(this, BlockchainActivity::class.java))
+            }
+
+            // Set up Wearable Devices button
+            binding.wearableButton.setOnClickListener {
+                startActivity(Intent(this, WearableActivity::class.java))
+            }
+
             // Set up logout button
             binding.logoutButton.setOnClickListener {
                 securityUtils.clearSession()

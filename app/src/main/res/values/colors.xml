@@ -28,6 +28,16 @@
     <color name="text_primary">#F9FAFB</color>  <!-- Cloud White -->
     <color name="text_secondary">#9CA3AF</color>  <!-- Cool Gray -->
     
+    <!-- Advanced Feature Card Colors -->
+    <color name="primary_blue">#3B82F6</color>  <!-- Main Blue -->
+    <color name="ai_purple">#8B5CF6</color>  <!-- AI Purple -->
+    <color name="community_green">#10B981</color>  <!-- Community Green -->
+    <color name="blockchain_orange">#F59E0B</color>  <!-- Blockchain Orange -->
+    <color name="government_red">#EF4444</color>  <!-- Government Red -->
+    <color name="wearable_teal">#14B8A6</color>  <!-- Wearable Teal -->
+    <color name="safety_yellow">#F59E0B</color>  <!-- Safety Yellow -->
+    <color name="emergency_red">#DC2626</color>  <!-- Emergency Red -->
+    
     <!-- Status Colors -->
     <color name="success">#10B981</color>  <!-- Success Green -->
     <color name="warning">#F59E0B</color>  <!-- Warning Amber -->
