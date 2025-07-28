@@ -102,6 +102,31 @@
             android:name=".ViewReportsActivity"
             android:exported="false"
             android:theme="@style/Theme.SafeNetShield.NoActionBar" />
+
+        <activity
+            android:name=".AIAssistantActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeNetShield" />
+
+        <activity
+            android:name=".BlockchainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeNetShield" />
+
+        <activity
+            android:name=".CommunityActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeNetShield" />
+
+        <activity
+            android:name=".GovernmentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeNetShield" />
+
+        <activity
+            android:name=".WearableActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SafeNetShield" />
     </application>
 
 </manifest>

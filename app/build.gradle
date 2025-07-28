@@ -67,6 +67,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        dataBinding true
     }
     packagingOptions {
         exclude 'META-INF/AL2.0'
