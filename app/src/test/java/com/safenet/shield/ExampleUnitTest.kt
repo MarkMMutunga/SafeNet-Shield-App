@@ -16,7 +16,7 @@
  * arising from, out of or in connection with the software or the use or other dealings
  * in the software.
  */
-package com.example.myapplication
+package com.safenet.shield
 
 import org.junit.Test
 
