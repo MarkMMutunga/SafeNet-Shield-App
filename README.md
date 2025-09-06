@@ -580,7 +580,7 @@ If you discover security vulnerabilities, please follow responsible disclosure:
 - 🔍 **Regular security audits** are essential for enterprise deployments
 
 ### Emergency Protocols
-- For critical security issues: security@safenetshield.com
+- For critical security issues: markmutunga03@gmail.com
 - For app emergencies: Call local emergency services (911, 999, 112)
 - For technical support: markmutunga03@gmail.com
 
